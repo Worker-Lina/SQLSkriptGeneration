@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 
 namespace SQLScriptsGeneration
@@ -11,16 +12,14 @@ namespace SQLScriptsGeneration
             Dictionary<string, string> types = new Dictionary<string, string>
             {
                 {"System.Int32", "INT"},
-                {"System.Boolean", "BOOLEAN"},
                 {"System.Double", "DECIMAL"},
                 { "System.String", "NVARCHAR(MAX)"},
-                { "System.Char", "NVARCHAR(MAX)"}
+                { "System.Char", "NVARCHAR(MAX)"},
+                {"System.Boolean", "BOOLEAN"}
             };
 
-            //string path = string.Empty;
             string path = @"C:\Users\ww\source\repos\SQLclass\SQLclass\bin\Debug\netcoreapp3.1\SQLclass.dll";
             
-
             while (true)
             {
                 Console.WriteLine(@"Путь по умолчанию: C:\Users\ww\source\repos\SQLclass\SQLclass\bin\Debug\netcoreapp3.1\SQLclass.dll");
@@ -40,7 +39,6 @@ namespace SQLScriptsGeneration
                 Console.Clear();
             }
 
-
             Assembly myLibrary;
             try
             {
@@ -50,16 +48,17 @@ namespace SQLScriptsGeneration
             {
                 Console.WriteLine(exception.Message);
                 return;
-            }
+            };
 
-
-
+            int countOfObjectMethods = 4;
             
             foreach (Type type in myLibrary.GetTypes())
             {
                 string sqlScript = "\nCREATE TABLE ";
 
-                if (!isClassData(type))
+                int methodCount = type.GetMethods().Where(m => !m.Name.StartsWith("get_") && !m.Name.StartsWith("set_")).Count();
+                
+                if (methodCount != countOfObjectMethods)
                 {
                     continue;
                 }
@@ -74,9 +73,7 @@ namespace SQLScriptsGeneration
 
                     int counter = new int();
                     foreach (var member in type.GetMembers())
-                    {
-                        
-
+                    {                      
                         if (member is PropertyInfo)
                         {
                             counter++;
@@ -86,11 +83,9 @@ namespace SQLScriptsGeneration
                             sqlScript += $"\t{propertyInfo.Name} {sqlType} NOT NULL";
                             if (propertyInfo.Name.ToLower() == "id")
                                 sqlScript += " IDENTITY PRIMARY KEY";
-
                             if (counter < numberProperty)
                                 sqlScript += ",";
                             sqlScript += "\n";
-
                         }
 
                     }
@@ -99,50 +94,6 @@ namespace SQLScriptsGeneration
                     Console.WriteLine(sqlScript);
                 }
             }
-        }
-
-        private static bool isClassData(Type type)
-        {
-            List<string> propertyNames = new List<string>();
-
-            List<string> defaultMethods = new List<string>()
-            {
-                "GetHashCode",
-                "GetType",
-                "Equals",
-                "ToString"
-            };
-
-            foreach (var member in type.GetMembers())
-            {
-                if (member is PropertyInfo)
-                {
-                    propertyNames.Add(member.Name);
-                    //Console.WriteLine(member.Name);
-                }
-            }
-
-            foreach(var member in type.GetMembers())
-            {
-
-                if (member is MethodInfo)
-                {
-                    if (defaultMethods.Contains(member.Name))
-                        continue;
-                    else
-                    {
-                        if (propertyNames.Contains(member.Name.Substring(4)))
-                        {
-                            continue;
-                        }
-                        else
-                            return false;
-                    }
-                    
-                }
-
-            }
-            return true;
-        }
+        }    
     }
 }
